@@ -67,3 +67,5 @@ def svm2classify(batch_size=100,learn_rate=0.01,iteration=300):
     plt.ylabel('huae width')
     plt.legend(loc='lower right')
     plt.show()
+if __name__=='__main__':
+    #svm2classify(batch_size=100,learn_rate=0.01,iteration=300)
