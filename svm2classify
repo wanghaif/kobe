@@ -1,0 +1,69 @@
+def svm2classify(batch_size=100,learn_rate=0.01,iteration=300):
+    
+    #下载iris数据集
+    iris=datasets.load_iris()
+    x_vals=np.array([[x[0],x[3]] for x in iris.data])
+    y_vals=np.array([1 if y==0 else -1 for y in iris.target])
+
+    #声明占位符和变量
+    x_data=tf.placeholder(tf.float32,[None,2])
+    predict_data=tf.placeholder(tf.float32,[None,2])
+    y_target=tf.placeholder(tf.float32,[None,1])
+    alpha=tf.Variable(tf.random_normal([1,batch_size]))
+    #声明数据高斯核函数,定义损失函数
+    gamma=tf.constant(-15.)
+    Xi_square=tf.reshape(tf.reduce_sum(tf.square(x_data),1),[-1,1])
+    square=tf.add(tf.subtract(Xi_square,tf.multiply(2.,tf.matmul(x_data,tf.transpose(x_data)))),tf.transpose(Xi_square))
+    my_kernel=tf.exp(tf.multiply(gamma,tf.abs(square)))
+    first_term=tf.reduce_sum(alpha)
+    alpha_cross=tf.matmul(tf.transpose(alpha),alpha)
+    y_cross=tf.matmul(y_target,tf.transpose(y_target))
+    second_term=tf.reduce_sum(tf.multiply(my_kernel,tf.multiply(alpha_cross,y_cross)))
+    loss=tf.negative(tf.subtract(first_term,second_term))
+    #声明预测核函数进行预测，定义准确度
+    rA=tf.reshape(tf.reduce_sum(tf.square(x_data),1),[-1,1])
+    rB=tf.reshape(tf.reduce_sum(tf.square(predict_data),1),[-1,1])
+    square2=tf.add(tf.subtract(rA,tf.multiply(2.,tf.matmul(x_data,tf.transpose(predict_data)))),tf.transpose(rB))
+    predict_kernel=tf.exp(tf.multiply(gamma,tf.abs(square2)))
+    predict_output=tf.matmul(tf.multiply(tf.transpose(y_target),alpha),predict_kernel)
+    predict=tf.sign(predict_output-tf.reduce_mean(predict_output))
+    accuracy=tf.reduce_mean(tf.cast(tf.equal(predict,y_target),tf.float32))
+    #声明优化器,开始会话
+    optimizer=tf.train.GradientDescentOptimizer(learn_rate)
+    sess=tf.Session()
+    train_step=optimizer.minimize(loss)
+    init=tf.global_variables_initializer()
+    sess.run(init)
+    #开始迭代训练
+    loss_vec=[]
+    acc_vec=[]
+    for i in range(iteration):
+        rand_index=np.random.choice(len(x_vals),size=batch_size)
+        rand_x=x_vals[rand_index]
+        rand_y=np.transpose([y_vals[rand_index]])
+        sess.run(train_step,feed_dict={x_data:rand_x,y_target:rand_y})
+        temp_loss=sess.run(loss,feed_dict={x_data:rand_x,y_target:rand_y})
+        loss_vec.append(temp_loss)
+        acc_temp=sess.run(accuracy,feed_dict={x_data:rand_x,y_target:rand_y,predict_data:rand_x})
+        acc_vec.append(acc_temp)
+    #绘制网格
+    x_min,x_max=x_vals[:,0].min()-1,x_vals[:,0].max()+1
+    y_min,y_max=x_vals[:,1].min()-1,x_vals[:,1].max()+1
+    xx,yy=np.meshgrid(np.arange(x_min,x_max,0.02),np.arange(y_min,y_max,0.02))
+    grid_point=np.c_[xx.ravel(),yy.ravel()]
+    [prediction]=sess.run(predict,feed_dict={x_data:rand_x,y_target:rand_y,predict_data:grid_point})
+    prediction=prediction.reshape(xx.shape)
+    #绘制决策边界
+    plt.contourf(xx,yy,prediction,cmap=plt.cm.ocean)
+    #绘制数据点
+    class1_x=[x[0] for i,x in enumerate(x_vals) if y_vals[i]==1]
+    class1_y=[x[1] for i,x in enumerate(x_vals) if y_vals[i]==1]
+    class2_x=[x[0] for i,x in enumerate(x_vals) if y_vals[i]==-1]
+    class2_y=[x[1] for i,x in enumerate(x_vals) if y_vals[i]==-1]
+    plt.plot(class1_x,class1_y,'ro',label='yuanweihua')
+    plt.plot(class2_x,class2_y,'kx',label='not yuanweihua')
+    plt.title('2_classify_Gaussian SVM result on iris data')
+    plt.xlabel('huaban length')
+    plt.ylabel('huae width')
+    plt.legend(loc='lower right')
+    plt.show()
